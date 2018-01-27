@@ -194,7 +194,7 @@ class TFrecorder(object):
             self.filenames = self.path
         else:
             self.filenames = paths
-        if '.tfrecord' not in self.filenames:    
+        if '.tfrecord' not in self.filenames and type(self.filenames) is not type([]): 
             self.filenames = self.filenames+'.tfrecord'
         if type(data_info) is type(None):
             data_info = self.data_info
