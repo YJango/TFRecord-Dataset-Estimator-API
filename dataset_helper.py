@@ -70,7 +70,7 @@ class TFrecorder(object):
                                     'type':dtype,
                                     'shape':shape,
                                     'isbyte':True,
-                                    'length_type': 'fixed',
+                                    'length_type': 'var',
                                     'default':np.NaN}
                 i+=1
                 data_info.loc[i] = {'name':key+'_shape',
@@ -85,7 +85,7 @@ class TFrecorder(object):
                                     'type':dtype,
                                     'shape':shape,
                                     'isbyte':False,
-                                    'length_type': 'fixed',
+                                    'length_type': 'var',
                                     'default':np.NaN}
                 i+=1
         return data_info
