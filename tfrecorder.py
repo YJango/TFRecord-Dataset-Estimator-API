@@ -148,8 +148,6 @@ class TFrecorder(object):
         
         if reshape is None:
             reshape = {}
-        else:
-            print('reshape')
         def parser(example_proto):
             
             def specify_features():
@@ -200,10 +198,7 @@ class TFrecorder(object):
                             decoded_value = tf.reshape(decoded_value, tf_shape)
                         elif names[i] in reshape.keys():
                             if len(reshape[names[i]])>0:
-                                print(names[i],reshape.keys())
-                                print(reshape[names[i]])
                                 decoded_value = tf.reshape(decoded_value, reshape[names[i]])
-                                print(decoded_value)
                         final_features[names[i]] = decoded_value
                 return final_features
             
