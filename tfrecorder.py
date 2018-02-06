@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import os
 
 class TFrecorder(object):
     
@@ -11,11 +12,14 @@ class TFrecorder(object):
         path: where to write and read
         
     '''
-    def __init__(self, isbyte=False , length_type ='var'):
-        self.isbyte  = isbyte
+    def __init__(self, length_type ='fixed'):
+        '''
+        Args: length_type: string, indicating how to parse the data
+           should be one of 'var' or 'fixed'
+        '''
         self.length_type = length_type
         
-    def feature_writer(self, df, value):
+    def feature_writer(self, df, value, features=None):
         '''
         Writes a single feature in features
         Args:
@@ -28,6 +32,8 @@ class TFrecorder(object):
         Raises:
             TypeError: Type is not one of ('int64', 'float32')
         '''
+        if features is None:
+            features = self.features
         name = df['name']
         isbyte = df['isbyte']
         length_type = df['length_type']
@@ -39,23 +45,24 @@ class TFrecorder(object):
         if isbyte:
             feature_typer = lambda x : tf.train.Feature(bytes_list = tf.train.BytesList(value=[x.tostring()]))
         else:
-            if dtype == np.int64:
+            if dtype == 'int64':
                 feature_typer = lambda x : tf.train.Feature(int64_list = tf.train.Int64List(value=x))
-            elif dtype == np.float32:
+            elif dtype == 'float32':
                 feature_typer = lambda x : tf.train.Feature(float_list = tf.train.FloatList(value=x))
             else:
-                raise TypeError("Type is not one of 'int64', 'float32'")
+                raise TypeError("Type is not one of 'np.int64', 'np.float32'")
         # check whether the input is (1D-array)
         # if the input is a scalar, convert it to list
         if len(shape)==0:
-            self.features[name] = feature_typer([value])
+            features[name] = feature_typer([value])
         elif len(shape)==1:
-            self.features[name] = feature_typer(value)
+            features[name] = feature_typer(value)
         # if # if the rank of input array >=2, flatten the input and save shape info
         elif len(shape) >1:
-            self.features[name] = feature_typer(value.reshape(-1))
+            features[name] = feature_typer(value.reshape(-1))
             # write shape info
-            self.features['%s_shape' %name] = tf.train.Feature(int64_list=tf.train.Int64List(value=shape))
+            features['%s_shape' %name] = tf.train.Feature(int64_list=tf.train.Int64List(value=shape))
+        return features
 
     def data_info_fn(self, one_example):
     
@@ -70,7 +77,7 @@ class TFrecorder(object):
                                     'type':dtype,
                                     'shape':shape,
                                     'isbyte':True,
-                                    'length_type': 'var',
+                                    'length_type': 'fixed',
                                     'default':np.NaN}
                 i+=1
                 data_info.loc[i] = {'name':key+'_shape',
@@ -85,23 +92,28 @@ class TFrecorder(object):
                                     'type':dtype,
                                     'shape':shape,
                                     'isbyte':False,
-                                    'length_type': 'var',
+                                    'length_type': self.length_type,
                                     'default':np.NaN}
                 i+=1
         return data_info
         
-    def writer(self, path, examples, data_info = None):
-        if data_info==None:
+    def writer(self, path, examples, data_info = None, num_examples_per_file = None):
+        if data_info is None:
             self.data_info = self.data_info_fn(examples[0])
         else:
             self.data_info = data_info
         self.path = path
-        if '.tfrecord' not in path:    
-            self.path = self.path+'.tfrecord'
-            
+
         self.num_example = len(examples)
         self.num_feature = len(examples[0])
-        writer = tf.python_io.TFRecordWriter('%s' %self.path)
+        if type(num_examples_per_file) is type(0):
+            num_so_far = 0
+            self.num_examples_per_file = num_examples_per_file
+            writer = tf.python_io.TFRecordWriter('%s%s_%s.tfrecord' %(self.path, num_so_far, self.num_examples_per_file))
+        else:
+            if '.tfrecord' not in self.path:
+                self.path = self.path+'.tfrecord'
+            writer = tf.python_io.TFRecordWriter('%s' %self.path)
         for e in np.arange(self.num_example):
             self.features={}
             for f in np.arange(self.num_feature):
@@ -112,6 +124,11 @@ class TFrecorder(object):
             tf_example = tf.train.Example(features = tf_features)
             tf_serialized = tf_example.SerializeToString()
             writer.write(tf_serialized)
+            if type(num_examples_per_file) is type(0):
+                if e%num_examples_per_file ==0 and e!=0:
+                    writer.close()
+                    num_so_far = e
+                    writer = tf.python_io.TFRecordWriter('%s%s_%s.tfrecord' %(self.path, num_so_far, e+self.num_examples_per_file))
         writer.close()
         self.data_csv = self.path.split('.tfrecor')[0]+'.csv'
         self.data_info.to_csv(self.data_csv,index=False)
@@ -120,7 +137,7 @@ class TFrecorder(object):
         print('saved data_info to %s' %self.data_csv)
         print(self.data_info)
         
-    def create_parser(self, data_info):
+    def create_parser(self, data_info, reshape):
         
         names = data_info['name']
         types = data_info['type']
@@ -129,6 +146,10 @@ class TFrecorder(object):
         defaults = data_info['default']
         length_types = data_info['length_type']
         
+        if reshape is None:
+            reshape = {}
+        else:
+            print('reshape')
         def parser(example_proto):
             
             def specify_features():
@@ -170,7 +191,6 @@ class TFrecorder(object):
                         else:
                             # Varlen value needs to be converted to dense format
                             if length_types[i] == 'var':
-                                print('var')
                                 decoded_value = tf.sparse_tensor_to_dense(parsed_example[names[i]])
                             else:
                                 decoded_value = parsed_example[names[i]]
@@ -178,46 +198,59 @@ class TFrecorder(object):
                         if '%s_shape' %names[i] in parsed_example.keys():
                             tf_shape = parsed_example['%s_shape' %names[i]]
                             decoded_value = tf.reshape(decoded_value, tf_shape)
+                        elif names[i] in reshape.keys():
+                            if len(reshape[names[i]])>0:
+                                print(names[i],reshape.keys())
+                                print(reshape[names[i]])
+                                decoded_value = tf.reshape(decoded_value, reshape[names[i]])
+                                print(decoded_value)
                         final_features[names[i]] = decoded_value
                 return final_features
+            
             
             # create a dictionary to specify how to parse each feature 
             specified_features = specify_features()
             # parse all features of an example
             parsed_example = tf.parse_single_example(example_proto, specified_features)
             final_features = decode_reshape()
+            
+            
+            
             return final_features
         return parser
-    def get_dataset(self, paths=None, data_info=None, shuffle = True, batch_size = None, epoch = 1, padding = None):
+    def get_filenames(self, path,shuffle=False):
+        # get all file names 
+        files= os.listdir(path) 
+        filepaths = [path+file for file in files if not os.path.isdir(file)]
+        # shuffle
+        if shuffle:
+            ri = np.random.permutation(len(filepaths))
+            filepaths = np.array(filepaths)[ri]
+        return filepaths
+    def get_dataset(self, paths, data_info, shuffle = True, shuffle_buffer=10000, batch_size = 1, epoch = 1, padding = None):
         
-        if paths==None:
-            self.filenames = self.path
-        else:
-            self.filenames = paths
-        if '.tfrecord' not in self.filenames and type(self.filenames) is not type([]): 
-            self.filenames = self.filenames+'.tfrecord'
-        if type(data_info) is type(None):
-            data_info = self.data_info
-        elif '.csv' in data_info:
-            print('read dataframe from %s' %data_info)
-            data_info = pd.read_csv(data_info,dtype={'isbyte':bool})
-            data_info['shape']=data_info['shape'].apply(lambda s: [int(i) for i in s[1:-1].split(',') if i !=''])
+        self.filenames = paths
+            
+        print('read dataframe from %s' %data_info)
+        data_info = pd.read_csv(data_info,dtype={'isbyte':bool})
+        data_info['shape']=data_info['shape'].apply(lambda s: [int(i) for i in s[1:-1].split(',') if i !=''])
             
         self.shuffle = shuffle
+        self.shuffle_buffer = shuffle_buffer
         self.batch_size = batch_size
         self.epoch = epoch
         self.padding = padding
         print(data_info)
         dataset = tf.data.TFRecordDataset(self.filenames)
-        self.parse_function = self.create_parser(data_info)
+       
+        self.parse_function = self.create_parser(data_info, padding)
         self.dataset = dataset.map(self.parse_function)
+        self.dataset_raw = self.dataset
         if self.shuffle:
-            self.dataset = self.dataset.shuffle(buffer_size=10000)
-            
-        if batch_size !=None:
-            if self.padding ==None:
-                self.dataset = self.dataset.batch(self.batch_size)
-            else:
-                self.dataset = self.dataset.padded_batch(self.batch_size, padded_shapes = self.padding)
+            self.dataset = self.dataset.shuffle(buffer_size=self.shuffle_buffer)
+        if self.padding is not None:
+            self.dataset = self.dataset.padded_batch(self.batch_size, padded_shapes = self.padding)
+        else:
+            self.dataset = self.dataset.batch(self.batch_size)
         self.dataset = self.dataset.repeat(self.epoch)
         return self.dataset
