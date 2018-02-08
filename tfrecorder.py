@@ -45,9 +45,9 @@ class TFrecorder(object):
         if isbyte:
             feature_typer = lambda x : tf.train.Feature(bytes_list = tf.train.BytesList(value=[x.tostring()]))
         else:
-            if dtype == 'int64':
+            if dtype == 'int64' or dtype == np.int64:
                 feature_typer = lambda x : tf.train.Feature(int64_list = tf.train.Int64List(value=x))
-            elif dtype == 'float32':
+            elif dtype == 'float32' or dtype == np.float32:
                 feature_typer = lambda x : tf.train.Feature(float_list = tf.train.FloatList(value=x))
             else:
                 raise TypeError("Type is not one of 'np.int64', 'np.float32'")
@@ -110,10 +110,12 @@ class TFrecorder(object):
             num_so_far = 0
             self.num_examples_per_file = num_examples_per_file
             writer = tf.python_io.TFRecordWriter('%s%s_%s.tfrecord' %(self.path, num_so_far, self.num_examples_per_file))
+            print('%s%s_%s.tfrecord' %(self.path, num_so_far, self.num_examples_per_file))
         else:
             if '.tfrecord' not in self.path:
                 self.path = self.path+'.tfrecord'
             writer = tf.python_io.TFRecordWriter('%s' %self.path)
+            print('????')
         for e in np.arange(self.num_example):
             self.features={}
             for f in np.arange(self.num_feature):
@@ -124,11 +126,12 @@ class TFrecorder(object):
             tf_example = tf.train.Example(features = tf_features)
             tf_serialized = tf_example.SerializeToString()
             writer.write(tf_serialized)
-            if type(num_examples_per_file) is type(0):
+            if type(self.num_examples_per_file) is type(0):
                 if e%num_examples_per_file ==0 and e!=0:
                     writer.close()
                     num_so_far = e
                     writer = tf.python_io.TFRecordWriter('%s%s_%s.tfrecord' %(self.path, num_so_far, e+self.num_examples_per_file))
+                    print('%s%s_%s.tfrecord' %(self.path, num_so_far, e+self.num_examples_per_file))
         writer.close()
         self.data_csv = self.path.split('.tfrecor')[0]+'.csv'
         self.data_info.to_csv(self.data_csv,index=False)
@@ -216,7 +219,7 @@ class TFrecorder(object):
     def get_filenames(self, path,shuffle=False):
         # get all file names 
         files= os.listdir(path) 
-        filepaths = [path+file for file in files if not os.path.isdir(file)]
+        filepaths = [path+file for file in files if not os.path.isdir(file) and '.tfrecord' in file]
         # shuffle
         if shuffle:
             ri = np.random.permutation(len(filepaths))
