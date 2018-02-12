@@ -53,7 +53,7 @@ class TFrecorder(object):
                 raise TypeError("Type is not one of 'np.int64', 'np.float32'")
         # check whether the input is (1D-array)
         # if the input is a scalar, convert it to list
-        if len(shape)==0:
+        if len(shape)==0 and isbyte==False:
             features[name] = feature_typer([value])
         elif len(shape)==1:
             features[name] = feature_typer(value)
