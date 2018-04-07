@@ -12,12 +12,13 @@ class TFrecorder(object):
         path: where to write and read
         
     '''
-    def __init__(self, length_type ='fixed'):
+    def __init__(self, length_type ='fixed',retrieve_shape = False):
         '''
         Args: length_type: string, indicating how to parse the data
            should be one of 'var' or 'fixed'
         '''
         self.length_type = length_type
+        self.retrieve_shape = retrieve_shape
         
     def feature_writer(self, df, value, features=None):
         '''
@@ -203,6 +204,8 @@ class TFrecorder(object):
                             if len(reshape[names[i]])>0:
                                 decoded_value = tf.reshape(decoded_value, reshape[names[i]])
                         final_features[names[i]] = decoded_value
+                    elif self.retrieve_shape:
+                        final_features[names[i]] = parsed_example[names[i]]
                 return final_features
             
             
