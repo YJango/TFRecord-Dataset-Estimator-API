@@ -106,7 +106,7 @@ class TFrecorder(object):
 
         self.num_example = len(examples)
         self.num_feature = len(examples[0])
-        if type(num_examples_per_file) is type(0):
+        if num_examples_per_file is not None:
             num_so_far = 0
             self.num_examples_per_file = num_examples_per_file
             writer = tf.python_io.TFRecordWriter('%s%s_%s.tfrecord' %(self.path, num_so_far, self.num_examples_per_file))
@@ -126,7 +126,7 @@ class TFrecorder(object):
             tf_example = tf.train.Example(features = tf_features)
             tf_serialized = tf_example.SerializeToString()
             writer.write(tf_serialized)
-            if type(self.num_examples_per_file) is type(0):
+            if num_examples_per_file is not None:
                 if e%num_examples_per_file ==0 and e!=0:
                     writer.close()
                     num_so_far = e
@@ -225,11 +225,11 @@ class TFrecorder(object):
             ri = np.random.permutation(len(filepaths))
             filepaths = np.array(filepaths)[ri]
         return filepaths
-    def get_dataset(self, paths, data_info, shuffle = True, shuffle_buffer=10000, batch_size = 1, epoch = 1, padding = None):
+    def get_dataset(self, paths, data_info, shuffle = True, shuffle_buffer=10000, batch_size = 1, epoch = 1, padding = None, reshape = None, num_parallel_calls=12, prefetch_buffer=1000):
         
         self.filenames = paths
             
-        print('read dataframe from %s' %data_info)
+        print('read dataframe from %s x %s' %(paths[0],len(paths)))
         data_info = pd.read_csv(data_info,dtype={'isbyte':bool})
         data_info['shape']=data_info['shape'].apply(lambda s: [int(i) for i in s[1:-1].split(',') if i !=''])
             
@@ -238,11 +238,11 @@ class TFrecorder(object):
         self.batch_size = batch_size
         self.epoch = epoch
         self.padding = padding
-        print(data_info)
+        #print(data_info)
         dataset = tf.data.TFRecordDataset(self.filenames)
        
-        self.parse_function = self.create_parser(data_info, padding)
-        self.dataset = dataset.map(self.parse_function)
+        self.parse_function = self.create_parser(data_info, reshape)
+        self.dataset = dataset.map(self.parse_function, num_parallel_calls=None).prefetch(prefetch_buffer)
         self.dataset_raw = self.dataset
         if self.shuffle:
             self.dataset = self.dataset.shuffle(buffer_size=self.shuffle_buffer)
