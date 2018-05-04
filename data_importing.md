@@ -53,11 +53,7 @@ TensorFlow中也加入了高级API （Estimator、Experiment，Dataset）帮助�
 
 TFRecord是以字典的方式一次写一个样本，字典的keys可以不以输入和标签，而以不同的特征（如学历，年龄，职业，收入）区分，在随后的读取中再选择哪些特征形成输入，哪些形成标签。这样的好处是，后续可以根据需要只挑选特定的特征；也可以方便应对例如多任务学习这样有多个输入和标签的机器学习任务。
 
-{% hint style="info" %}
- 一般而言，单数的feature是一个维度，即标量。所有的features组成representation。但在 TFRecord的存储中，字典中feature的value可以不是标量。如：key为学历的value就可以是：\[初中，高中，大学\]，3个features所形成的向量。亦可是任何维度的张量。
-{% endhint %}
-
-
+ 注：一般而言，单数的feature是一个维度，即标量。所有的features组成representation。但在 TFRecord的存储中，字典中feature的value可以不是标量。如：key为学历的value就可以是：\[初中，高中，大学\]，3个features所形成的向量。亦可是任何维度的张量。
 
 
 
