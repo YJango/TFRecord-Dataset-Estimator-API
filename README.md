@@ -6,5 +6,7 @@ TensorFlow 目前是最为常用的深度学习框架。然而从头编写整个
 
 
 
+{% embed data="{\"url\":\"https://plot.ly/~gxiiukk/52/\",\"type\":\"rich\",\"title\":\"data preprocessing plot \| scatter chart made by Gxiiukk \| plotly\",\"description\":\"Gxiiukk\'s interactive graph and data of \\"data preprocessing plot\\" is a scatter chart, showing original vs standardization; with time in the x-axis and value in the y-axis..\",\"icon\":{\"type\":\"icon\",\"url\":\"https://plot.ly/favicon.ico?v=2\",\"aspectRatio\":0},\"embed\":{\"type\":\"app\",\"html\":\"<a href=\\"https://plot.ly/~gxiiukk/52/\\" target=\\"\_blank\\" style=\\"display: block; text-align: center;\\"><img src=\\"https://plot.ly/~gxiiukk/52.png\\"/></a><script data-plotly=\\"gxiiukk:52\\" src=\\"https://plot.ly/embed.js\\" async></script>\",\"aspectRatio\":0}}" %}
+
 
 
