@@ -4,7 +4,7 @@ TensorFlow 目前是最为常用的深度学习框架。然而从头编写整个
 
 
 
-{% embed data="{\"url\":\"https://zhuanlan.zhihu.com/p/33223782\",\"type\":\"link\",\"title\":\"YJango：TensorFlow中层API Datasets+TFRecord的数据导入\",\"description\":\"目录前言优势Dataset APITFRecord概念数据说明数据存储常用存储TFRecord存储实现生成数据写入TFRecord file存储类型如何存储张量feature使用Dataset创建dataset操作dataset解析函数迭代样本ShuffleBatchBatch padd…\",\"icon\":{\"type\":\"icon\",\"url\":\"https://static.zhihu.com/static/favicon.ico\",\"aspectRatio\":0},\"thumbnail\":{\"type\":\"thumbnail\",\"url\":\"https://pic3.zhimg.com/v2-f1ef00abf1a5245cbcb46b99c7517620\_r.jpg\",\"width\":1872,\"height\":820,\"aspectRatio\":0.43803418803418803}}" %}
+
 
 
 
